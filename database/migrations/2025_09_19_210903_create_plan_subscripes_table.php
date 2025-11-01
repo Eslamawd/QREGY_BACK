@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('plan_subscripes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('name_en');      
+            $table->integer('max_restaurants')->default(1);
+            $table->integer('max_tables')->default(1);
+            $table->integer('max_items')->default(1);
+            $table->boolean('vip_support')->default(false);
+            $table->decimal('price', 8, 2);
+            $table->integer('duration_days'); // مدة الاشتراك بالأيام
+            $table->json('features')->nullable(); // ميزات الاشتراك
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('plan_subscripes');
+    }
+};
