@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendNewOrderNotification;
+use App\Jobs\SendUpdateOrderNotification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemOption;
@@ -101,7 +103,8 @@ class OrderController extends Controller
     'orderItems.item',
     'orderItems.options'
 ])->find($order->id);
-        $this->webSocket->sendNewOrder($data);
+
+ SendNewOrderNotification::dispatch($order);
 
         return response()->json($data, 201);
     }
@@ -115,8 +118,11 @@ class OrderController extends Controller
         $order->update(['status' => $validated['status']]);
 
         // إرسال تحديث الحالة للمطبخ أو الكاشير
-
-        $this->webSocket->sendOrderUpdated($order->id, $order->restaurant_id, $order->status);
+SendUpdateOrderNotification::dispatch(
+            $order->id, 
+            $order->restaurant_id, 
+            $order->status // 👈 المتغير المفقود
+        );
 
         return response()->json($order);
     }

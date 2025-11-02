@@ -17,7 +17,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () {
         //get All Users Change Role 
          Route::get('users', [AdminController::class, 'index']);
-         Route::delete('users', [AdminController::class, 'destroy']);
+         Route::delete('users/{id}', [AdminController::class, 'destroy']);
          Route::post('users/{id}/change-role', [AdminController::class, 'changeRole']);
 
          
