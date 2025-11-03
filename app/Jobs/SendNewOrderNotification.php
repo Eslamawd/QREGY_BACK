@@ -24,12 +24,7 @@ class SendNewOrderNotification implements ShouldQueue
      * ✅ هذا السطر يخبر Laravel بتحميل العلاقات المطلوبة عند تنفيذ الـ Job.
      * @var array
      */
-    public $with = [
-        'table:id,name', 
-        'restaurant:id,name',
-        'orderItems.item',
-        'orderItems.options'
-    ];
+  
 
 
     /**
@@ -38,7 +33,7 @@ class SendNewOrderNotification implements ShouldQueue
      * @param \App\Models\Order $order
      * @return void
      */
-    public function __construct(Order $order)
+    public function __construct( $order)
     {
         // هنا يتم تمرير النموذج الأساسي (غالباً يحوي فقط ID)
         $this->order = $order; 

@@ -29,6 +29,10 @@ class OrderController extends Controller
         );
     }
 
+    public function show(Order $order) {
+    return response()->json($order);
+    }
+
     public function getByKitchen(Request $request)
     {
         $restaurant = $request->get('restaurant');
@@ -95,16 +99,19 @@ class OrderController extends Controller
         }
 
         // 🔔 إرسال إشعار للمطبخ / الكاشير عبر WebSocket Server
-     
-        // ✅ كده الكود أنضف
-      $data = Order::with([
-    'table:id,name', // تحميل اسم الطاولة فقط لتقليل البيانات
-    'restaurant:id,name',
-    'orderItems.item',
-    'orderItems.options'
-])->find($order->id);
+        
+        SendNewOrderNotification::dispatch($order);
+        
+           // ✅ كده الكود أنضف
+         $data = Order::with([
+       'table:id,name', // تحميل اسم الطاولة فقط لتقليل البيانات
+       'restaurant:id,name',
+       'orderItems.item',
+       'orderItems.options'
+   ])->find($order->id);
 
- SendNewOrderNotification::dispatch($order);
+   
+        SendNewOrderNotification::dispatch($data);
 
         return response()->json($data, 201);
     }
@@ -127,50 +134,6 @@ SendUpdateOrderNotification::dispatch(
         return response()->json($order);
     }
 
-    public function removeOrderItem(Order $order, $itemId)
-{
-    
-
-    $orderItem = $order->orderItems()->where('id', $itemId)->first();
-
-    if (!$orderItem) {
-        return response()->json(['message' => 'Item not found in order'], 404);
-    }
-
-    $orderItem->delete();
-
-    // تحديث السعر الكلي للطلب
-    $order->total_price = $order->orderItems()->sum('subtotal');
-    $order->save();
-
-    $orderResult = $order->load('orderItems.item.options');
-
-    $this->webSocket->sendOrderUpdatedAll($order->id, $order->restaurant_id, $orderResult);
-
-    return response()->json(['message' => 'Item removed successfully', 'order' => $orderResult]);
-}
-
-public function updateOrderItemQuantity(Request $request,Order $order, $itemId)
-{
-    $request->validate([
-        'quantity' => 'required|integer|min:1'
-    ]);
-
- 
-
-    $orderItem = $order->orderItems()->where('id', $itemId)->first();
-
-    $orderItem->quantity = $request->quantity;
-    $orderItem->subtotal = $orderItem->price * $request->quantity;
-    $orderItem->save();
-
-    $order->total_price = $order->orderItems()->sum('subtotal');
-    $order->save();
-
-    $this->webSocket->sendOrderUpdated($order->id, $order->restaurant_id, 'item_updated');
-
-    return response()->json(['message' => 'Quantity updated', 'order' => $order->load('orderItems.item.options')]);
-}
 
 
 }

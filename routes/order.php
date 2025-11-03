@@ -18,3 +18,5 @@ use Illuminate\Support\Facades\Route;
     Route::patch('/orders/{id}/kitchen', [OrderController::class, 'updateStatus'])->middleware(VerifyKitchenAccess::class);
 
     Route::patch('/orders/{id}/cashier', [OrderController::class, 'updateStatus'])->middleware(VerifyCashierAccess::class);
+
+    Route::get('/orders/{order}/user', [OrderController::class, 'show'])->middleware(VerifyRestaurantAccess::class);
