@@ -45,6 +45,7 @@ require __DIR__.'/order.php';
 require __DIR__.'/withdraw.php';
 require __DIR__.'/categories.php';
 require __DIR__.'/affiliate.php';
+require __DIR__.'/inventoryItem.php';
 require __DIR__.'/restaurant.php';
 require __DIR__.'/subscriptions.php';
 require __DIR__.'/admin.php';

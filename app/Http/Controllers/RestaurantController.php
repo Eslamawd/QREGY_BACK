@@ -20,6 +20,7 @@ class RestaurantController extends Controller
     {
         $user = auth()->user();
         $restaurants = $user->restaurants()->with(['tables', 'menus'])->get();
+       
         return response()->json($restaurants);
     }
     public function getByAdmin(Request $request)
@@ -145,12 +146,12 @@ class RestaurantController extends Controller
      */
     public function show(Restaurant $restaurant)
     {
-        $restaurant->load(['tables','cashiers','kitchens', 'menus.categories']);
+        $restaurant->load(['tables','cashiers','kitchens', 'menus.categories', 'links']);
         return response()->json($restaurant);
     }
     public function getByUser(Restaurant $restaurant)
     {
-        $restaurant->load([ 'menus.categories.items.options']);
+        $restaurant->load([ 'menus.categories.items.options','links']);
         return response()->json($restaurant);
     }
 

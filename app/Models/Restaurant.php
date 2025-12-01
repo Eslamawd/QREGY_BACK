@@ -99,5 +99,16 @@ public function getLogoPathAttribute()
 
     return storage_path('app/public/' . $this->attributes['logo']);
 }
+public function inventoryItems()
+{
+    return $this->hasMany(InventoryItem::class);
+
+
+}
+
+public function links()
+{
+    return $this->hasOne(RestaurantLinks::class);
+}
 
 }
