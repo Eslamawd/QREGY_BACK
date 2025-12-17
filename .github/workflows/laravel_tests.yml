@@ -34,10 +34,10 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2" # يمكنك تغيير الإصدار حسب متطلبات مشروعك
+          php-version: "8.2"
           extensions: bcmath, curl, fileinfo, json, mbstring, pdo, sqlite, zip, tokenizer, xml, ctype, openssl, gd, mysqli
           ini-values: post_max_size=256M, upload_max_filesize=256M
-          coverage: none # أو xdebug / pcov إذا كنت بحاجة لتقرير التغطية
+          coverage: none
 
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-progress
@@ -46,9 +46,11 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
 
-      - name: Run Database Migrations (for SQLite testing)
-        run: php artisan migrate --env=testing --force
+      - name: Run Database Migrations
+        run: php artisan migrate --force
 
       - name: Run Laravel Tests
         run: php vendor/bin/phpunit
