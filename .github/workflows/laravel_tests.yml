@@ -1,0 +1,54 @@
+name: Laravel Tests
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "**.php"
+      - "app/**"
+      - "public/**"
+      - "resources/**"
+      - "config/**"
+      - "database/**"
+      - "routes/**"
+      - "tests/**"
+  pull_request:
+    branches: ["main", "master"]
+    paths:
+      - "**.php"
+      - "app/**"
+      - "public/**"
+      - "resources/**"
+      - "config/**"
+      - "database/**"
+      - "routes/**"
+      - "tests/**"
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2" # يمكنك تغيير الإصدار حسب متطلبات مشروعك
+          extensions: bcmath, curl, fileinfo, json, mbstring, pdo, sqlite, zip, tokenizer, xml, ctype, openssl, gd, mysqli
+          ini-values: post_max_size=256M, upload_max_filesize=256M
+          coverage: none # أو xdebug / pcov إذا كنت بحاجة لتقرير التغطية
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Prepare Laravel Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run Database Migrations (for SQLite testing)
+        run: php artisan migrate --env=testing --force
+
+      - name: Run Laravel Tests
+        run: php vendor/bin/phpunit
