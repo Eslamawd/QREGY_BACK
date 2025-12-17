@@ -53,4 +53,5 @@ jobs:
         run: php artisan migrate --force
 
       - name: Run Laravel Tests
-        run: php vendor/bin/phpunit
+        # التعديل هنا ليتناسب مع Pest PHP المستخدم في مشروعك
+        run: ./vendor/bin/pest
