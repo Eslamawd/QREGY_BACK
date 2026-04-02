@@ -5,6 +5,8 @@ use App\Http\Middleware\VerifyOrderAccess;
 use App\Http\Middleware\VerifyUserMakeRestaurant;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/restaurants/nearby', [RestaurantController::class, 'nearby']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/restaurants/links', [\App\Http\Controllers\RestaurantLinksController::class, 'update']);
 

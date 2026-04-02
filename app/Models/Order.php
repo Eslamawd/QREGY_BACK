@@ -14,6 +14,9 @@ class Order extends Model
         'status',
         'restaurant_id',
         'table_id',
+        'delivery_address',
+        'customer_lat',
+        'customer_lng',
     ];
 
     public function restaurant()

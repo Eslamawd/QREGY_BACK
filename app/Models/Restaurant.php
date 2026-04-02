@@ -19,8 +19,24 @@ class Restaurant extends Model
         'cover',
         'phone',
         'address',
+        'latitude',
+        'longitude',
+        'delivery_radius_km',
+        'open_time',
+        'close_time',
         'qr_code',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'delivery_radius_km' => 'float',
+            'open_time' => 'string',
+            'close_time' => 'string',
+        ];
+    }
 
           public function getCoverAttribute($value)
     {

@@ -18,6 +18,11 @@ class RestaurantUpdatedRequest extends FormRequest
             'type' => 'sometimes|string|in:restaurant,coffee',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
+            'delivery_radius_km' => 'sometimes|nullable|numeric|min:1|max:100',
+            'open_time' => 'sometimes|nullable|date_format:H:i',
+            'close_time' => 'sometimes|nullable|date_format:H:i',
             'logo' => 'sometimes|image|mimes:jpg,jpeg,png|max:2048',
             'cover' => 'sometimes|image|mimes:jpg,jpeg,png|max:4096',
         ];

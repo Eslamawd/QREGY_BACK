@@ -6,13 +6,88 @@ use App\Models\Restaurant;
 use App\Http\Requests\Created\RestaurantRequest;
 use App\Http\Requests\Updated\RestaurantUpdatedRequest;
 use App\Models\User;
-use Illuminate\Auth\Events\Validated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class RestaurantController extends Controller
 {
+    public function nearby(Request $request)
+    {
+        $validated = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'radius' => 'nullable|numeric|min:1|max:100',
+            'type' => 'nullable|in:restaurant,coffee,all',
+            'open_now' => 'nullable|boolean',
+            'delivery_speed' => 'nullable|in:all,fast,standard,slow',
+        ]);
+
+        $latitude = (float) $validated['lat'];
+        $longitude = (float) $validated['lng'];
+        $radius = (float) ($validated['radius'] ?? 10);
+        $type = $validated['type'] ?? 'all';
+        $openNow = filter_var($request->input('open_now', false), FILTER_VALIDATE_BOOLEAN);
+        $deliverySpeed = $validated['delivery_speed'] ?? 'all';
+
+        $distanceExpression = '(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))';
+        $etaExpression = "(CEIL(({$distanceExpression}) * 2 + 10))";
+
+        $restaurants = Restaurant::query()
+            ->select('restaurants.*')
+            ->selectRaw("{$distanceExpression} as distance_km", [$latitude, $longitude, $latitude])
+            ->selectRaw("{$etaExpression} as eta_minutes", [$latitude, $longitude, $latitude])
+            ->with('links')
+            ->withCount('menus')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereHas('user', function ($query) {
+                $query->whereHas('activeSubscription');
+            })
+            ->when($type !== 'all', function ($query) use ($type) {
+                $query->where('type', $type);
+            })
+            ->whereRaw(
+                "{$distanceExpression} <= LEAST(COALESCE(delivery_radius_km, ?), ?)",
+                [$latitude, $longitude, $latitude, $radius, $radius]
+            )
+            ->orderBy('distance_km')
+            ->limit(80)
+            ->get();
+
+        $restaurants = $restaurants
+            ->map(function (Restaurant $restaurant) {
+                $isOpenNow = $this->isRestaurantOpenNow($restaurant);
+                $speed = $this->resolveDeliverySpeed((float) ($restaurant->eta_minutes ?? 0));
+
+                $restaurant->setAttribute('is_open_now', $isOpenNow);
+                $restaurant->setAttribute('delivery_speed', $speed);
+
+                return $restaurant;
+            })
+            ->filter(function ($restaurant) use ($openNow, $deliverySpeed) {
+                if ($openNow && !$restaurant->is_open_now) {
+                    return false;
+                }
+
+                if ($deliverySpeed !== 'all' && $restaurant->delivery_speed !== $deliverySpeed) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->sortBy([
+                ['is_open_now', 'desc'],
+                ['eta_minutes', 'asc'],
+                ['distance_km', 'asc'],
+            ])
+            ->take(24)
+            ->values();
+
+        return response()->json($restaurants);
+    }
+
     /**
      * عرض كل المطاعم
      */
@@ -88,6 +163,11 @@ class RestaurantController extends Controller
             'type' => $request->type,
             'phone' => $request->phone,
             'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'delivery_radius_km' => $request->delivery_radius_km ?? 10,
+            'open_time' => $request->open_time,
+            'close_time' => $request->close_time,
             'logo' => $logoPath,
             'cover' => $coverPath,
         ]);
@@ -161,7 +241,7 @@ class RestaurantController extends Controller
     public function update(RestaurantUpdatedRequest $request, Restaurant $restaurant)
     {
         // لو المستخدم فقط هو المالك
-        if (auth()->id() !== $restaurant->user_id || !auth()->user()->hasRole    ('admin')) {
+        if (auth()->id() !== $restaurant->user_id && !auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -195,7 +275,7 @@ class RestaurantController extends Controller
      */
     public function destroy(Restaurant $restaurant)
     {
-        if (auth()->id() !== $restaurant->user_id || !auth()->user()->hasRole    ('admin')) {
+        if (auth()->id() !== $restaurant->user_id && !auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -209,6 +289,43 @@ class RestaurantController extends Controller
         $restaurant->delete();
 
         return response()->json(['message' => 'Restaurant deleted successfully'], 204);
+    }
+
+    private function isRestaurantOpenNow(Restaurant $restaurant): bool
+    {
+        if (!$restaurant->open_time || !$restaurant->close_time) {
+            return true;
+        }
+
+        $now = Carbon::now();
+        $openAt = Carbon::createFromFormat('H:i:s', $restaurant->open_time, config('app.timezone'));
+        $closeAt = Carbon::createFromFormat('H:i:s', $restaurant->close_time, config('app.timezone'));
+
+        $openAt->setDate($now->year, $now->month, $now->day);
+        $closeAt->setDate($now->year, $now->month, $now->day);
+
+        if ($closeAt->lessThanOrEqualTo($openAt)) {
+            if ($now->lessThan($openAt)) {
+                $openAt->subDay();
+            } else {
+                $closeAt->addDay();
+            }
+        }
+
+        return $now->between($openAt, $closeAt);
+    }
+
+    private function resolveDeliverySpeed(float $etaMinutes): string
+    {
+        if ($etaMinutes <= 25) {
+            return 'fast';
+        }
+
+        if ($etaMinutes <= 40) {
+            return 'standard';
+        }
+
+        return 'slow';
     }
 public function getResOrdRevCount()
 {
